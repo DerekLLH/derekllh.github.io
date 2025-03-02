@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--Edit By Derek 25.03.02--> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineSweep</title>
+    <style>
+        body {
+            margin: 20px;
+            background: #f0f0f0;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #restart-button {
+            padding: 8px 20px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        #restart-button:hover {
+            background: #45a049;
+        }
+
+        .mine-counter {
+            font-size: 20px;
+            font-family: Arial;
+            color: #333;
+        }
+
+        
+        .container {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-auto-rows: 30px;
+            gap: 1px;
+            background: #999;
+            padding: 2px;
+            border: 2px solid #666;
+            width: fit-content; 
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            background: #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-family: Arial;
+            font-weight: bold;
+            font-size: 14px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .cell:hover {
+            background: #b3b3b3;
+        }
+
+        .revealed {
+            background: #bdbdbd;
+        }
+
+        .flag::after {
+            content: "🚩";
+            position: absolute;
+            font-size: 18px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .mine::after {
+            content: "💣";
+            font-size: 18px;
+        }
+
+        .mine.flag::after {
+            content: "👍";
+            color: green;
+        }
+    </style>
+</head>
+<body>
+	<script>console.log("这里什么都没有 别看了🥱😴")</script>
+	<h1>极简扫雷❤</h6>
+    <div class="controls">
+        <div class="mine-counter">剩余地雷: <span id="mines-counter">10</span></div>
+        <button id="restart-button">▶重新开始游戏</button>
+    </div>
+    <div class="container" id="board"></div>
+	<p>version 1.0.0</p>
+	<p>Edit By Derek 25.03.02</p>
+
+    <script>
+        const SIZE = 10;
+        const MINES_COUNT = 10;
+        let board = [];
+        let gameOver = false;
+        let minesLeft = MINES_COUNT;
+
+        // 初始化游戏
+        function initGame() {
+            // 初始化数据结构
+            board = Array(SIZE).fill().map(() => 
+                Array(SIZE).fill().map(() => ({
+                    isMine: false,
+                    revealed: false,
+                    neighborMines: 0,
+                    flagged: false
+                }))
+            );
+
+            // 放置地雷
+            let minesPlaced = 0;
+            while (minesPlaced < MINES_COUNT) {
+                const x = Math.floor(Math.random() * SIZE);
+                const y = Math.floor(Math.random() * SIZE);
+                if (!board[x][y].isMine) {
+                    board[x][y].isMine = true;
+                    minesPlaced++;
+                }
+            }
+
+            // 计算相邻雷数
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE; j++) {
+                    if (!board[i][j].isMine) {
+                        board[i][j].neighborMines = countNeighborMines(i, j);
+                    }
+                }
+            }
+
+            // 重置游戏状态
+            minesLeft = MINES_COUNT;
+            gameOver = false;
+            updateMineCounter();
+            renderBoard();
+        }
+
+        // 计算相邻地雷数
+        function countNeighborMines(x, y) {
+            let count = 0;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < SIZE && 
+                        ny >= 0 && ny < SIZE &&
+                        board[nx][ny].isMine) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        // 渲染棋盘
+        function renderBoard() {
+            const container = document.getElementById('board');
+            container.innerHTML = '';
+            
+            // 生成网格
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    // 状态显示
+                    if (board[i][j].revealed) {
+                        cell.classList.add('revealed');
+                        if (board[i][j].isMine) {
+                            cell.classList.add('mine');
+                        } else if (board[i][j].neighborMines > 0) {
+                            cell.textContent = board[i][j].neighborMines;
+                        }
+                    }
+                    
+                    if (board[i][j].flagged) {
+                        cell.classList.add('flag');
+                    }
+
+                    // 事件绑定
+                    cell.addEventListener('click', () => handleClick(i, j));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        handleRightClick(i, j);
+                    });
+                    
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // 点击处理
+        function handleClick(x, y) {
+            if (gameOver || board[x][y].flagged) return;
+            
+            if (board[x][y].isMine) {
+                gameOver = true;
+                alert('游戏结束！踩到地雷！😝');
+                revealAll();
+                return;
+            }
+            
+            reveal(x, y);
+            checkWin();
+            renderBoard();
+        }
+
+        // 右键处理
+        function handleRightClick(x, y) {
+            if (gameOver || board[x][y].revealed) return;
+            
+            board[x][y].flagged = !board[x][y].flagged;
+            minesLeft += board[x][y].flagged ? -1 : 1;
+            updateMineCounter();
+            checkWin();
+            renderBoard();
+        }
+
+        // 揭示单元格
+        function reveal(x, y) {
+            if (x < 0 || x >= SIZE || y < 0 || y >= SIZE || 
+                board[x][y].revealed || board[x][y].flagged) return;
+            
+            board[x][y].revealed = true;
+            
+            if (board[x][y].neighborMines === 0) {
+                // 自动展开空白区域
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx !== 0 || dy !== 0) {
+                            reveal(x + dx, y + dy);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 胜利判断
+        function checkWin() {
+            let win = true;
+            
+            // 检查所有非雷是否已开
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE; j++) {
+                    if (!board[i][j].isMine && !board[i][j].revealed) {
+                        win = false;
+                        break;
+                    }
+                }
+                if (!win) break;
+            }
+            
+            // 或所有雷被正确标记
+            if (!win) {
+                win = board.flat().every(cell => 
+                    (cell.isMine && cell.flagged) || 
+                    (!cell.isMine && !cell.flagged)
+                );
+            }
+
+            if (win) {
+                gameOver = true;
+                alert('胜利！扫雷成功！🕵️‍♂ヾ(≧ ▽ ≦)ゝ');
+				
+                revealAll();
+            }
+        }
+
+        // 显示所有地雷
+        function revealAll() {
+            board.forEach(row => row.forEach(cell => {
+                if (cell.isMine) cell.revealed = true;
+            }));
+            renderBoard();
+        }
+
+        // 更新计数器
+        function updateMineCounter() {
+            document.getElementById('mines-counter').textContent = minesLeft;
+        }
+
+        // 初始化
+        document.getElementById('restart-button').addEventListener('click', initGame);
+        initGame();
+    </script>
+</body>
+</html>
