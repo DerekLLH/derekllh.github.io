@@ -84,7 +84,6 @@
             font-weight: 600;
             color: #0258a8;
         }
-        /* 网易云iframe容器 - 独立区域，不受刷新影响 */
         .music-wrapper {
             display: flex;
             justify-content: center;
@@ -99,6 +98,28 @@
             margin-top: 18px;
             border-top: 2px dashed #55809c;
             padding-top: 15px;
+        }
+         #confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        .confetti-piece {
+            position: absolute;
+            font-size: 24px;
+            animation: fall linear forwards;
+            color: #ff6b6b;
+            text-shadow: 0 0 5px gold;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -127,6 +148,7 @@
         生日快乐 🎉 🎉 🎉
     </div>
 </div>
+<div id="confetti-container"></div>
 
 <script>
     (function() {
@@ -160,11 +182,56 @@
             document.getElementById('currentAge').innerText = ageYears.toFixed(3);
         }
 
+                // 彩带效果
+        function throwConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⭐', '🌟', '🎈', '🎂', '🍰', '🎁', '✨', '🎉'];
+            const pieces = 100; 
+
+            for (let i = 0; i < pieces; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti-piece';
+                    
+                    // 随机生成
+                    const left = Math.random() * 100;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    const size = 16 + Math.floor(Math.random() * 24); // 16-40px
+                    const duration = 1 + Math.random() * 2; // 1-3秒
+                    const delay = Math.random() * 0.5;
+                    
+                    confetti.style.left = left + '%';
+                    confetti.style.top = '-10%';
+                    confetti.innerHTML = color;
+                    confetti.style.fontSize = size + 'px';
+                    confetti.style.animation = `fall ${duration}s ease-in ${delay}s forwards`;
+                    
+                    container.appendChild(confetti);
+                    
+                    // 动画结束
+                    setTimeout(() => {
+                        if (confetti.parentNode) {
+                            confetti.remove();
+                        }
+                    }, (duration + delay) * 1000);
+                }, i * 30);
+            }
+        }
+
+        // 点击可以触发
+        document.body.addEventListener('click', function() {
+            throwConfetti();
+        });
+
+        window.addEventListener('load', function() {
+            setTimeout(throwConfetti, 500);
+        });
+
         window.addEventListener('load', function() {
             const musicContainer = document.getElementById('musicContainer');
             musicContainer.innerHTML = '';
             
-            // 创建网易云iframe元素
+            // 创建网易云iframe
             const iframe = document.createElement('iframe');
             iframe.id = 'neteasemusic';
             iframe.frameborder = 'no';
@@ -184,6 +251,7 @@
         // 每秒更新
         setInterval(update, 1000);
     })();
+    
 </script>
 
 
